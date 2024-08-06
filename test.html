@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drawing App with Shapes and Images</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/3.6.2/fabric.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            background-color: #ffffff;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls label {
+            margin: 0 10px;
+        }
+
+        .controls input[type="color"] {
+            padding: 0;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .controls input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            margin-left: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .controls button {
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #canvas {
+            border: 2px solid #000;
+            background-color: #ffffff;
+            cursor: crosshair;
+            margin: 20px 0;
+        }
+
+        .instructions {
+            font-size: 14px;
+            color: #555;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <label for="color">Choose color:</label>
+        <input type="color" id="color" value="#000000">
+        
+        <label for="lineWidth">Line width:</label>
+        <input type="number" id="lineWidth" value="5" min="1" max="50">
+        
+        <button id="eraser">Eraser</button>
+        <button id="draw">Draw</button>
+        <button id="clear">Clear Canvas</button>
+        <button id="rect">Add Rectangle</button>
+        <button id="circle">Add Circle</button>
+        <button id="line">Add Line</button>
+        <button id="addImage">Add Image</button>
+    </div>
+    
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script>
+        let currentShape = 'draw'; // По умолчанию режим рисования
+        const canvas = new fabric.Canvas('canvas', {
+            isDrawingMode: true
+        });
+
+        // Настройки кисти по умолчанию
+        canvas.freeDrawingBrush.color = '#000000'; // Цвет по умолчанию
+        canvas.freeDrawingBrush.width = 5;         // Ширина линии по умолчанию
+
+        // Переключение на режим рисования
+        function enableDrawingMode() {
+            canvas.isDrawingMode = true;
+            canvas.freeDrawingBrush.color = document.getElementById('color').value;
+            canvas.freeDrawingBrush.width = parseInt(document.getElementById('lineWidth').value, 10);
+            currentShape = 'draw';
+        }
+
+        // Переключение на режим стирателя
+        function enableEraserMode() {
+            canvas.isDrawingMode = true;
+            canvas.freeDrawingBrush.color = '#ffffff'; // Белый цвет для стирания
+            canvas.freeDrawingBrush.width = parseInt(document.getElementById('lineWidth').value, 10);
+            currentShape = 'eraser';
+        }
+
+        // Добавление прямоугольника
+        function addRectangle(left, top) {
+            const rect = new fabric.Rect({
+                left: left,
+                top: top,
+                width: 100,
+                height: 100,
+                fill: document.getElementById('color').value,
+                selectable: true,
+                hasControls: true,
+                hasBorders: true
+            });
+            canvas.add(rect);
+        }
+
+        // Добавление круга
+        function addCircle(left, top) {
+            const circle = new fabric.Circle({
+                left: left,
+                top: top,
+                radius: 50,
+                fill: document.getElementById('color').value,
+                selectable: true,
+                hasControls: true,
+                hasBorders: true
+            });
+            canvas.add(circle);
+        }
+
+        // Добавление линии
+        function addLine(left, top) {
+            const line = new fabric.Line([left, top, left + 100, top], {
+                stroke: document.getElementById('color').value,
+                strokeWidth: parseInt(document.getElementById('lineWidth').value, 10),
+                selectable: true,
+                hasControls: true,
+                hasBorders: true
+            });
+            canvas.add(line);
+        }
+
+        // Добавление изображения
+        function addImage(url, left, top) {
+            fabric.Image.fromURL(url, function(img) {
+                img.set({
+                    left: left,
+                    top: top,
+                    selectable: true,
+                    hasControls: true,
+                    hasBorders: true,
+                    cornerSize: 24, // Размер угловых маркеров управления
+                    padding: 10 // Отступ между границей и контролем
+                });
+                canvas.add(img);
+                canvas.renderAll();
+            });
+        }
+
+        // Обработчик кликов на холсте для добавления фигур
+        canvas.on('mouse:down', function(event) {
+            if (event.e.button === 0) { // Левый клик мыши
+                const pointer = canvas.getPointer(event.e);
+                if (currentShape === 'rect') {
+                    canvas.isDrawingMode = false; // Отключаем режим рисования
+                    addRectangle(pointer.x, pointer.y);
+                    canvas.isDrawingMode = true; // Включаем режим рисования обратно
+                } else if (currentShape === 'circle') {
+                    canvas.isDrawingMode = false;
+                    addCircle(pointer.x, pointer.y);
+                    canvas.isDrawingMode = true;
+                } else if (currentShape === 'line') {
+                    canvas.isDrawingMode = false;
+                    addLine(pointer.x, pointer.y);
+                    canvas.isDrawingMode = true;
+                }
+            } else if (event.e.button === 2) { // Правый клик мыши
+                event.e.preventDefault(); // Отменяем контекстное меню браузера
+                const pointer = canvas.getPointer(event.e);
+                const target = canvas.findTarget(event.e);
+                if (target) {
+                    canvas.setActiveObject(target);
+                    canvas.renderAll();
+                }
+            }
+        });
+
+        // Обработчик изменения цвета
+        document.getElementById('color').addEventListener('input', function() {
+            if (canvas.isDrawingMode) {
+                canvas.freeDrawingBrush.color = this.value;
+            } else {
+                const activeObject = canvas.getActiveObject();
+                if (activeObject) {
+                    activeObject.set('fill', this.value);
+                    canvas.renderAll();
+                }
+            }
+        });
+
+        // Обработчик изменения ширины линии
+        document.getElementById('lineWidth').addEventListener('input', function() {
+            if (canvas.isDrawingMode) {
+                canvas.freeDrawingBrush.width = parseInt(this.value, 10);
+            } else {
+                const activeObject = canvas.getActiveObject();
+                if (activeObject && activeObject.type === 'line') {
+                    activeObject.set('strokeWidth', parseInt(this.value, 10));
+                    canvas.renderAll();
+                }
+            }
+        });
+
+        // Обработчик переключения на режим стирателя
+        document.getElementById('eraser').addEventListener('click', function() {
+            enableEraserMode();
+        });
+
+        // Обработчик переключения на режим рисования
+        document.getElementById('draw').addEventListener('click', function() {
+            enableDrawingMode();
+        });
+
+        // Обработчик добавления прямоугольника
+        document.getElementById('rect').addEventListener('click', function() {
+            enableDrawingMode(); // Отключаем стиратель
+            currentShape = 'rect';
+        });
+
+        // Обработчик добавления круга
+        document.getElementById('circle').addEventListener('click', function() {
+            enableDrawingMode(); // Отключаем стиратель
+            currentShape = 'circle';
+        });
+
+        // Обработчик добавления линии
+        document.getElementById('line').addEventListener('click', function() {
+            enableDrawingMode(); // Отключаем стиратель
+            currentShape = 'line';
+        });
+
+        // Обработчик добавления изображения
+        document.getElementById('addImage').addEventListener('click', function() {
+            const url = prompt('Enter the image URL:');
+            if (url) {
+                const pointer = canvas.getPointer({ x: canvas.width / 2, y: canvas.height / 2 });
+                addImage(url, pointer.x, pointer.y);
+            }
+        });
+
+        // Обработчик очистки холста
+        document.getElementById('clear').addEventListener('click', function() {
+            canvas.clear();
+        });
+
+        // Включаем режим рисования по умолчанию
+        enableDrawingMode();
+
+        // Отключение контекстного меню по правому клику
+        canvas.on('mouse:down', function(event) {
+            if (event.e.button === 2) { // Правый клик мыши
+                event.e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
